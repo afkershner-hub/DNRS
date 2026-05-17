@@ -680,9 +680,8 @@ main {
 <div class="tabs">
   <button class="tab active" onclick="showPanel('today')">📋 Today</button>
   <button class="tab" onclick="showPanel('calendar')">📅 Calendar</button>
-  <button class="tab" onclick="showPanel('journal')">📖 Journal</button>
+  <button class="tab" onclick="showPanel('gratitude')">🙏 Gratitude</button>
   <button class="tab" onclick="showPanel('badges')">🏅 Badges</button>
-  <button class="tab" onclick="showPanel('coach')">💬 Coach</button>
 </div>
 
 <main>
@@ -759,12 +758,18 @@ main {
     </div>
   </div>
 
-  <!-- JOURNAL PANEL -->
-  <div class="panel" id="panel-journal">
+  <!-- GRATITUDE PANEL -->
+  <div class="panel" id="panel-gratitude">
     <div class="card">
-      <h2>Practice Journal 📖</h2>
-      <div id="journal-feed" class="log-feed">
-        <div class="empty-state"><span class="big">📖</span>Your practice log will appear here.</div>
+      <h2>Today's Gratitude 🙏</h2>
+      <p style="font-size:13px; color:var(--text-soft); margin-bottom:16px;">What are you grateful for today?</p>
+      <textarea id="gratitude-input" placeholder="Today I am grateful for..." style="width:100%; border:2px solid rgba(61,107,92,0.2); border-radius:12px; padding:14px; font-family:'DM Sans',sans-serif; font-size:14px; color:var(--text); background:rgba(255,255,255,0.7); outline:none; resize:none; min-height:120px; transition:border-color 0.2s; line-height:1.6;" onfocus="this.style.borderColor='var(--sage)'" onblur="this.style.borderColor='rgba(61,107,92,0.2)'"></textarea>
+      <button class="log-btn" style="margin-top:10px;" onclick="saveGratitude()">💛 Save Gratitude</button>
+    </div>
+    <div class="card">
+      <h2>Gratitude History ✨</h2>
+      <div id="gratitude-feed" class="log-feed">
+        <div class="empty-state"><span class="big">🌸</span>Your gratitude entries will bloom here.</div>
       </div>
     </div>
   </div>
@@ -778,42 +783,6 @@ main {
     </div>
   </div>
 
-  <!-- COACH PANEL -->
-  <div class="panel" id="panel-coach">
-    <div class="card">
-      <h2>Talk to Your Coach 💬</h2>
-      <p style="font-size:12px; color:var(--text-soft); margin-bottom:12px;">Your coach knows DNRS, knows your patterns, and is here whenever you need support.</p>
-
-      <div class="quick-prompts">
-        <button class="quick-prompt" onclick="sendQuick(`I'm struggling to do my rounds today`)">I can't make myself practice</button>
-        <button class="quick-prompt" onclick="sendQuick(`I'm stuck in a POP spiral`)">I'm in a POP spiral</button>
-        <button class="quick-prompt" onclick="sendQuick(`I don't believe I'll get better`)">I've lost belief</button>
-        <button class="quick-prompt" onclick="sendQuick(`I need a new FV scene idea`)">Give me an FV idea</button>
-        <button class="quick-prompt" onclick="sendQuick(`I want to drink right now`)">I want to drink</button>
-        <button class="quick-prompt" onclick="sendQuick(`I had a really good day today`)">I had a good day!</button>
-      </div>
-
-      <div class="coach-messages" id="coach-messages">
-        <div class="msg coach">
-          <div class="msg-sender">Coach</div>
-          Hey Ashley 🌿 I'm here. You can check in about anything — a hard moment, a win, a POP you're stuck in, or just how today went. What's on your mind?
-        </div>
-      </div>
-
-      <div class="typing-indicator" id="typing">
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-      </div>
-
-      <div class="coach-input-row">
-        <textarea class="coach-input" id="coach-input" placeholder="Type here..." rows="1"
-          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
-          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-        <button class="send-btn" id="send-btn" onclick="sendMessage()">↑</button>
-      </div>
-    </div>
-  </div>
 
 </main>
 
@@ -847,7 +816,7 @@ function showPanel(name) {
   document.getElementById('panel-' + name).classList.add('active');
   event.target.classList.add('active');
   if (name === 'calendar') renderCalendar();
-  if (name === 'journal') renderJournal();
+  if (name === 'gratitude') renderGratitude();
   if (name === 'badges') renderBadges();
 }
 
@@ -1181,106 +1150,52 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// ── COACHING ─────────────────────────────────────────────────
-const SYSTEM_PROMPT = `You are Ashley's personal DNRS (Dynamic Neural Retraining System) coach. You know everything about the DNRS program and about Ashley specifically.
+// ── GRATITUDE ─────────────────────────────────────────────────
+function saveGratitude() {
+  const text = document.getElementById('gratitude-input').value.trim();
+  if (!text) { showToast('Write something first 🌸'); return; }
+  const data = loadData();
+  const today = todayStr();
+  if (!data.gratitude) data.gratitude = [];
+  // Update or add today's entry
+  const existing = data.gratitude.find(g => g.date === today);
+  if (existing) {
+    existing.text = text;
+  } else {
+    data.gratitude.unshift({ date: today, text });
+  }
+  saveData(data);
+  renderGratitude();
+  showToast('Gratitude saved 💛');
+  launchCritter();
+}
 
-About DNRS:
-- 5 Pillars: 1) Recognize limbic system imbalance, 2) Catch and interrupt POPs (Pathways of the Past), 3) Complete full rounds of 9 retraining steps daily for minimum 1 hour, 4) Incremental training, 5) Elevate emotional state throughout the day
-- POPs are any thoughts, emotions, or behaviors that keep the limbic system stuck
-- The 9 steps: Stuck (Stop stop stop), Aware (brain sending false messages), Past (over-firing caused symptoms and coping), Choice (choose to rewire), Higher Self (love yourself + thank limbic system), Proclamation (I am calm. I am vibrant. I am happy. - hand on heart), Memory/PM (positive memory, all senses, present tense, 5-7 min), Future/FV (thriving future scene, all senses, 5-7 min), Higher Self close (celebrate)
-- Key language: ITs = symptoms, TZ = training zone, ICT = incremental training, PM = positive memory, FV = future visualization, DOSE = good neurochemicals, CAN = stress neurochemicals, LSI = limbic system impairment, FAR = focus association repetition
+function renderGratitude() {
+  const data = loadData();
+  const gratitude = data.gratitude || [];
+  const today = todayStr();
 
-About Ashley:
-- She struggles with fatigue, brain fog, anxiety, low mood, ear ringing, hand shaking
-- She has a pattern called "Leo" - her inner achievement-driven, perfectionistic critic that shows fortune-telling, perfectionism, over-responsibility, rushing
-- Her biggest POPs: fortune-telling about work/health, perfectionism, body checking, comparing to past self, over-analyzing
-- She is married to Geoff, has a son Theo (around 9), works as Communications Director at a construction company (JLC)
-- She loves tennis, pickleball, yoga, cooking for friends, travel
-- Her vision: Saturday tennis mornings, pool days with Theo, pickleball, yoga, cooking with energy, weekends working on the house with Geoff, more travel, friends for dinner, energy all day, concerts with Theo
-- Her proclamation: "I am calm. I am vibrant. I am happy." with hand on heart
-- She has struggled with alcohol as a coping mechanism for anxiety - reaching for it when over-activated or feeling flat
-- She has a history of starts and stops with DNRS - her biggest fear is not being able to stick with it
-- She has depression that is being treated, and is seeing a somatic therapist
-- She needs honest accountability-focused coaching, not just validation
-- The belief that she can heal and a clear vision of her future life are her fuel for practicing
-- Key milestone: March 21st was a breakthrough day when she felt genuinely better after one week
-
-Your coaching style:
-- Warm but direct and honest - she asked for accountability not just validation
-- Name POPs when you see them in what she says
-- Reference Leo when relevant
-- Use DNRS language naturally (POPs, ITs, rounds, PM, FV, CAN, DOSE etc)
-- When she's struggling, help her do ONE thing - not everything
-- When she's doing well, help her notice and celebrate it specifically
-- Keep responses concise - 2-4 short paragraphs max
-- You care about her deeply and want her to succeed`;
-
-let conversationHistory = [];
-
-async function sendMessage() {
-  const input = document.getElementById('coach-input');
-  const msg = input.value.trim();
-  if (!msg) return;
-
-  addMessage(msg, 'user');
-  input.value = '';
-  input.style.height = 'auto';
-
-  document.getElementById('send-btn').disabled = true;
-  document.getElementById('typing').classList.add('visible');
-
-  conversationHistory.push({ role: 'user', content: msg });
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: SYSTEM_PROMPT,
-        messages: conversationHistory
-      })
-    });
-
-    const data = await response.json();
-    const reply = data.content?.[0]?.text || "I'm here. Tell me more.";
-
-    conversationHistory.push({ role: 'assistant', content: reply });
-    document.getElementById('typing').classList.remove('visible');
-    addMessage(reply, 'coach');
-
-  } catch (err) {
-    document.getElementById('typing').classList.remove('visible');
-    addMessage("Something went wrong connecting. But I'm still here — try again. 🌿", 'coach');
+  // Pre-fill today's entry if it exists
+  const todayEntry = gratitude.find(g => g.date === today);
+  if (todayEntry) {
+    document.getElementById('gratitude-input').value = todayEntry.text;
+  } else {
+    document.getElementById('gratitude-input').value = '';
   }
 
-  document.getElementById('send-btn').disabled = false;
-}
+  const container = document.getElementById('gratitude-feed');
+  if (gratitude.length === 0) {
+    container.innerHTML = '<div class="empty-state"><span class="big">🌸</span>Your gratitude entries will bloom here.</div>';
+    return;
+  }
 
-function sendQuick(msg) {
-  document.getElementById('coach-input').value = msg;
-  showPanel('coach');
-  // Find coach tab and activate
-  document.querySelectorAll('.tab').forEach(t => {
-    if (t.textContent.includes('Coach')) {
-      t.classList.add('active');
-    } else {
-      t.classList.remove('active');
-    }
-  });
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-coach').classList.add('active');
-  sendMessage();
-}
-
-function addMessage(text, sender) {
-  const container = document.getElementById('coach-messages');
-  const div = document.createElement('div');
-  div.className = `msg ${sender}`;
-  div.innerHTML = `<div class="msg-sender">${sender === 'coach' ? 'Coach' : 'Ashley'}</div>${text.replace(/\n/g, '<br>')}`;
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  container.innerHTML = gratitude.map(g => `
+    <div class="log-entry win-entry">
+      <span class="log-entry-badge">💛</span>
+      <div class="log-entry-text" style="white-space:pre-wrap;">${g.text}</div>
+      <span class="log-entry-date">${formatDate(g.date)}</span>
+    </div>
+  `).join('');
 }
 
 // ── INIT ──────────────────────────────────────────────────────
