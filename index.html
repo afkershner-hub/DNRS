@@ -648,6 +648,24 @@ main {
 <div id="critter1" class="critter"></div>
 <div id="critter2" class="critter"></div>
 
+<!-- 60 min celebration overlay -->
+<div id="sixty-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99999; align-items:center; justify-content:center; padding:24px;">
+  <div style="background:var(--white); border-radius:24px; padding:36px 28px; text-align:center; max-width:340px; width:100%; box-shadow:0 24px 80px rgba(0,0,0,0.3); animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);">
+    <div style="font-size:64px; margin-bottom:12px;">🎉</div>
+    <h2 style="font-family:'Fraunces',serif; font-size:28px; color:var(--forest); margin-bottom:8px;">ONE HOUR!</h2>
+    <p style="font-family:'Fraunces',serif; font-style:italic; font-size:16px; color:var(--text-mid); margin-bottom:6px;">You did it, Ashley.</p>
+    <p style="font-size:13px; color:var(--text-soft); margin-bottom:24px; line-height:1.6;">A full hour of practice today. Your brain is changing. The roots are growing. 🌱</p>
+    <button onclick="closeSixty()" style="width:100%; padding:14px; border-radius:12px; border:none; background:linear-gradient(130deg,var(--forest),var(--ocean)); color:white; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:600; cursor:pointer;">Very good, very good, YEAH! 🎊</button>
+  </div>
+</div>
+
+<style>
+@keyframes popIn {
+  0% { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+</style>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -741,6 +759,7 @@ main {
           <div class="unit">celebrate it</div>
         </div>
       </div>
+      <div id="today-mins-display" style="text-align:center; margin-top:8px; margin-bottom:4px; font-family:'Fraunces',serif; font-size:14px; color:var(--text-soft);">Today: <span id="today-mins-num" style="color:var(--forest); font-size:18px; font-weight:500;">0</span> minutes</div>
       <button class="log-btn" onclick="logToday()">✨ Save Today's Practice</button>
     </div>
 
@@ -828,12 +847,14 @@ function initFirebase() {
     }
     _loaded = true;
     updateStats();
+    updateTodayMins();
     renderRecentWins();
     renderCalendar();
   }).catch(err => {
     console.error('Firebase load error:', err);
     _loaded = true;
     updateStats();
+    updateTodayMins();
     renderRecentWins();
     renderCalendar();
   });
@@ -895,6 +916,11 @@ function logToday() {
 
   saveData(data);
 
+  // Check if we just crossed 60 minutes today
+  const newTodayEntry = data.entries.find(e => e.date === today);
+  const newTodayMins = newTodayEntry ? (newTodayEntry.mins || 0) : 0;
+  const prevTodayMins = newTodayMins - mins;
+
   // Reset inputs
   document.getElementById('input-mins').value = '';
   document.getElementById('input-win').value = '';
@@ -902,10 +928,40 @@ function logToday() {
   document.getElementById('pop-counter').textContent = '0';
 
   updateStats();
+  updateTodayMins();
   renderRecentWins();
   checkBadges(data);
-  showToast('Logged! You showed up today. 🌿');
-  if (mins > 0) launchCritter();
+
+  if (prevTodayMins < 60 && newTodayMins >= 60) {
+    // Big celebration!
+    setTimeout(() => {
+      document.getElementById('sixty-overlay').style.display = 'flex';
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => launchCritter(), i * 300);
+      }
+    }, 400);
+  } else {
+    showToast('Logged! You showed up today. 🌿');
+    if (mins > 0) launchCritter();
+  }
+}
+
+function closeSixty() {
+  document.getElementById('sixty-overlay').style.display = 'none';
+  showToast('Amazing. Absolute legend. 🌱');
+}
+
+function updateTodayMins() {
+  const data = loadData();
+  const today = todayStr();
+  const entry = data.entries.find(e => e.date === today);
+  const mins = entry ? (entry.mins || 0) : 0;
+  const el = document.getElementById('today-mins-num');
+  if (el) {
+    el.textContent = mins;
+    el.style.color = mins >= 60 ? 'var(--forest)' : mins >= 30 ? 'var(--sky)' : 'var(--forest)';
+    el.style.fontSize = mins >= 60 ? '24px' : '18px';
+  }
 }
 
 // ── STATS ────────────────────────────────────────────────────
